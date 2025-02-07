@@ -7,6 +7,8 @@
     <title>Login Screen</title>
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- jQuery CDN -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -67,6 +69,73 @@
             margin-top: 15px;
             font-size: 14px;
         }
+
+        .password-toggle {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+        }
+
+        .password-container {
+            position: relative;
+        }
+
+        .password-container input {
+            padding-right: 35px;
+        }
+
+        .strength-indicator {
+            font-size: 12px;
+            margin-top: 5px;
+        }
+
+        .password-strength-weak {
+            color: red;
+        }
+
+        .password-strength-medium {
+            color: orange;
+        }
+
+        .password-strength-strong {
+            color: green;
+        }
+
+        .invalid-field {
+            border-color: red !important;
+        }
+
+        .form-tooltip {
+            position: absolute;
+            top: -25px;
+            left: 0;
+            font-size: 12px;
+            color: red;
+            display: none;
+        }
+
+        .loading-spinner {
+            display: none;
+        }
+
+        .progress-bar-container {
+            display: none;
+            margin-top: 10px;
+            width: 100%;
+        }
+
+        .progress-bar {
+            height: 5px;
+            width: 0;
+        }
+
+        .password-complexity {
+            font-size: 12px;
+            color: #888;
+        }
+
     </style>
 </head>
 
@@ -93,15 +162,27 @@
                         </div>
                         <div class="mb-3">
                             <input type="email" class="form-control" name="email" id="student-email" placeholder="College Email (e.g., yourname@student.tce.edu)" required>
+                            <div class="form-tooltip" id="email-tooltip">Please enter a valid college email.</div>
                         </div>
-                        <div class="mb-3">
+                        <div class="mb-3 password-container">
                             <input type="password" class="form-control" name="password" id="student-password" placeholder="Password" required>
+                            <span class="password-toggle" id="toggle-password">&#128065;</span>
                             <ul style="font-size: smaller;">
                                 <li>Minimum 8 characters</li>
                                 <li>At least 1 special character</li>
                             </ul>
+                            <div class="strength-indicator" id="password-strength"></div>
+                            <div class="progress-bar-container">
+                                <div class="progress-bar" id="password-progress"></div>
+                            </div>
                         </div>
                         <button type="submit" class="btn form-btn w-100">Sign Up</button>
+                        <button type="button" class="btn form-btn w-100 mt-3" id="reset-form">Reset Form</button>
+                        <div class="loading-spinner" id="loading-spinner">
+                            <div class="spinner-border" role="status">
+                                <span class="sr-only"></span>
+                            </div>
+                        </div>
                     </form>
                     <button type="button" class="toggle-btn" onclick="toggleStudent()">Already a user? Sign In now</button>
                 </div>
@@ -112,8 +193,9 @@
                         <div class="mb-3">
                             <input type="email" class="form-control" name="email" id="signin-email" placeholder="College Email (e.g., yourname@student.tce.edu)" required>
                         </div>
-                        <div class="mb-3">
-                            <input type="password" class="form-control" name="password" placeholder="Password" required>
+                        <div class="mb-3 password-container">
+                            <input type="password" class="form-control" name="password" id="signin-password" placeholder="Password" required>
+                            <span class="password-toggle" id="toggle-signin-password">&#128065;</span>
                         </div>
                         <button type="submit" class="btn form-btn w-100">Sign In</button>
                     </form>
@@ -126,8 +208,9 @@
                     <div class="mb-3">
                         <input type="email" class="form-control" name="email" placeholder="Email" required>
                     </div>
-                    <div class="mb-3">
+                    <div class="mb-3 password-container">
                         <input type="password" class="form-control" name="password" placeholder="Password" required>
+                        <span class="password-toggle" id="toggle-teacher-password">&#128065;</span>
                     </div>
                     <button type="submit" class="btn form-btn w-100">Sign In</button>
                 </form>
@@ -135,49 +218,76 @@
         </div>
     </div>
 
-    <!-- Bootstrap JavaScript -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        function toggleStudent() {
-            const studentSignup = document.getElementById('student-signup');
-            const studentSignin = document.getElementById('student-signin');
-            studentSignup.classList.toggle('d-none');
-            studentSignin.classList.toggle('d-none');
-        }
-
-        document.getElementById('student-form').addEventListener('submit', function (event) {
-            const email = document.getElementById('student-email').value;
-            const password = document.getElementById('student-password').value;
-            const regNumber = document.querySelector('input[name="register_number"]').value;
-
-            const emailRegex = /^[a-zA-Z0-9._%+-]+@student\.tce\.edu$/;
-            const passwordRegex = /^(?=.*[!@#$%^&*])(?=.*[a-zA-Z])(?=.*\d).{8,}$/;
-            const regNumberRegex = /^\d{16}$/;
-
-            if (!emailRegex.test(email)) {
-                alert("Enter a valid college email (yourname@student.tce.edu)");
-                event.preventDefault();
-            }
-
-            if (!passwordRegex.test(password)) {
-                alert("Password must be at least 8 characters with at least 1 special character and 1 number.");
-                event.preventDefault();
-            }
-
-            if (!regNumberRegex.test(regNumber)) {
-                alert("Register number must be exactly 16 digits.");
-                event.preventDefault();
-            }
+        $('#toggle-password').on('click', function () {
+            const passwordField = $('#student-password');
+            const type = passwordField.attr('type') === 'password' ? 'text' : 'password';
+            passwordField.attr('type', type);
         });
 
-        document.getElementById('signin-form').addEventListener('submit', function (event) {
-            const email = document.getElementById('signin-email').value;
-            const emailRegex = /^[a-zA-Z0-9._%+-]+@student\.tce\.edu$/;
+        $('#toggle-signin-password').on('click', function () {
+            const passwordField = $('#signin-password');
+            const type = passwordField.attr('type') === 'password' ? 'text' : 'password';
+            passwordField.attr('type', type);
+        });
 
+        $('#toggle-teacher-password').on('click', function () {
+            const passwordField = $('input[name="password"]');
+            const type = passwordField.attr('type') === 'password' ? 'text' : 'password';
+            passwordField.attr('type', type);
+        });
+
+        $('#student-email').on('input', function () {
+            const email = $(this).val();
+            const emailRegex = /^[a-zA-Z0-9._%+-]+@student\.tce\.edu$/;
             if (!emailRegex.test(email)) {
-                alert("Enter a valid college email (yourname@student.tce.edu)");
-                event.preventDefault();
+                $('#email-tooltip').show();
+            } else {
+                $('#email-tooltip').hide();
             }
+        });
+        $('#student-password').on('input', function () {
+            const password = $(this).val();
+            const strength = getPasswordStrength(password);
+            $('#password-strength').text(strength.text).removeClass().addClass(`password-strength-${strength.level}`);
+            updatePasswordProgress(password);
+        });
+
+        function getPasswordStrength(password) {
+            let strength = { level: 'weak', text: 'Weak' };
+            if (password.length >= 8 && /[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+                strength = { level: 'medium', text: 'Medium' };
+            }
+            if (password.length >= 12 && /[A-Z]/.test(password) && /[a-z]/.test(password) && /[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+                strength = { level: 'strong', text: 'Strong' };
+            }
+            return strength;
+        }
+
+        function updatePasswordProgress(password) {
+            const strength = getPasswordStrength(password);
+            const progress = strength.level === 'weak' ? 25 : strength.level === 'medium' ? 50 : 100;
+            $('#password-progress').css('width', `${progress}%`);
+            $('.progress-bar-container').show();
+        }
+
+        $('#student-form').on('submit', function (e) {
+            e.preventDefault();
+            $('#loading-spinner').show();
+            setTimeout(() => {
+                $('#loading-spinner').hide();
+                alert('Form submitted successfully!');
+            }, 2000);
+        });
+
+        function toggleStudent() {
+            $('#student-signup').toggle();
+            $('#student-signin').toggle();
+        }
+
+        $('#reset-form').on('click', function () {
+            $('#student-form')[0].reset();
         });
     </script>
 </body>
