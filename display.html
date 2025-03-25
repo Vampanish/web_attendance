@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance Table</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; }
+        table { width: 70%; margin: 20px auto; border-collapse: collapse; }
+        th, td { border: 1px solid black; padding: 10px; text-align: center; }
+        th { background-color: #f4f4f4; }
+    </style>
+</head>
+<body>
+    <h2>Attendance Records</h2>
+    <label for="datePicker">Select Date:</label>
+    <input type="date" id="datePicker">
+    <table>
+        <thead>
+            <tr>
+                <th>Register No</th>
+                <th>Name</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody id="attendanceTable"></tbody>
+    </table>
+
+    <script>
+        const datePicker = document.getElementById("datePicker");
+        const tableBody = document.getElementById("attendanceTable");
+
+        // Load latest date and set it as default
+        fetch("http://localhost:5000/getAttendanceDates")
+            .then(response => response.json())
+            .then(dates => {
+                if (dates.length > 0) {
+                    datePicker.value = dates[0]; // Set latest date as default
+                    loadAttendance(dates[0]); // Load attendance for latest date
+                }
+            })
+            .catch(err => console.log("Error fetching dates:", err));
+
+        // Function to load attendance based on selected date
+        function loadAttendance(date) {
+            fetch(`http://localhost:5000/getAttendanceByDate?date=${date}`)
+                .then(response => response.json())
+                .then(data => {
+                    tableBody.innerHTML = data.map(row => `
+                        <tr>
+                            <td>${row.register}</td>
+                            <td>${row.name}</td>
+                            <td>${row.status}</td>
+                        </tr>
+                    `).join("");
+                })
+                .catch(err => console.log("Error fetching attendance:", err));
+        }
+
+        // Change table when a new date is selected
+        datePicker.addEventListener("change", () => {
+            loadAttendance(datePicker.value);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Roll Call Management System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #71b7e6, #9b59b6);
+            padding: 20px;
+        }
+
+        .container {
+            position: relative;
+            max-width: 850px;
+            width: 100%;
+            background: #fff;
+            padding: 40px 30px;
+            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
+            border-radius: 15px;
+        }
+
+        .container header {
+            position: relative;
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+            text-align: center;
+            margin-bottom: 35px;
+        }
+
+        .container header::before {
+            content: "";
+            position: absolute;
+            left: 0;
+            bottom: -10px;
+            height: 3px;
+            width: 100%;
+            background: linear-gradient(135deg, #71b7e6, #9b59b6);
+        }
+
+        .toggle-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+
+        .toggle-btn {
+            padding: 10px 30px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            color: #666;
+            position: relative;
+        }
+
+        .toggle-btn.active {
+            color: #9b59b6;
+        }
+
+        .toggle-btn.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: #9b59b6;
+        }
+
+        .form-container form {
+            display: none;
+        }
+
+        .form-container form.active {
+            display: block;
+        }
+
+        .input-box {
+            margin-bottom: 25px;
+        }
+
+        .input-box label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+        }
+
+        .input-box input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .input-box input:focus {
+            border-color: #9b59b6;
+            box-shadow: 0 0 8px rgba(155, 89, 182, 0.2);
+        }
+
+        .button {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #71b7e6, #9b59b6);
+            border: none;
+            border-radius: 5px;
+            color: #fff;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .button:hover {
+            background: linear-gradient(-135deg, #71b7e6, #9b59b6);
+        }
+
+        .error-message {
+            color: #dc3545;
+            text-align: center;
+            margin-top: 15px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>Roll Call Management System</header>
+        
+        <div class="toggle-container">
+            <button class="toggle-btn active" onclick="toggleForm('login')">Login</button>
+            <button class="toggle-btn" onclick="toggleForm('signup')">Sign Up</button>
+        </div>
+
+        <div class="form-container">
+            <!-- Login Form -->
+            <form id="loginForm" class="active">
+                <div class="input-box">
+                    <label>Register Number</label>
+                    <input type="text" required>
+                </div>
+                <div class="input-box">
+                    <label>Password</label>
+                    <input type="password" required>
+                </div>
+                <button type="submit" class="button">Login</button>
+                <div class="error-message"></div>
+            </form>
+
+            <!-- Signup Form -->
+            <form id="signupForm">
+                <div class="input-box">
+                    <label>Full Name</label>
+                    <input type="text" required>
+                </div>
+                <div class="input-box">
+                    <label>Email</label>
+                    <input type="email" required>
+                </div>
+                <div class="input-box">
+                    <label>Register Number</label>
+                    <input type="text" required>
+                </div>
+                <div class="input-box">
+                    <label>Password</label>
+                    <input type="password" required>
+                </div>
+                <button type="submit" class="button">Sign Up</button>
+                <div class="error-message"></div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function toggleForm(formType) {
+            const loginForm = document.getElementById('loginForm');
+            const signupForm = document.getElementById('signupForm');
+            const [loginBtn, signupBtn] = document.querySelectorAll('.toggle-btn');
+
+            if (formType === 'login') {
+                loginForm.classList.add('active');
+                signupForm.classList.remove('active');
+                loginBtn.classList.add('active');
+                signupBtn.classList.remove('active');
+            } else {
+                signupForm.classList.add('active');
+                loginForm.classList.remove('active');
+                signupBtn.classList.add('active');
+                loginBtn.classList.remove('active');
+            }
+        }
+
+        // Login form submission
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const form = e.target;
+            const errorDiv = form.querySelector('.error-message');
+            
+            try {
+                const response = await fetch('http://localhost:5000/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        register: form.querySelector('input[type="text"]').value,
+                        password: form.querySelector('input[type="password"]').value
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    sessionStorage.setItem('userData', JSON.stringify(data));
+                    window.location.href = 'dashboard.html';
+                } else {
+                    errorDiv.textContent = data.message;
+                    errorDiv.style.display = 'block';
+                }
+            } catch (error) {
+                errorDiv.textContent = 'An error occurred. Please try again.';
+                errorDiv.style.display = 'block';
+            }
+        });
+
+        // Signup form submission
+        document.getElementById('signupForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const form = e.target;
+            const errorDiv = form.querySelector('.error-message');
+            
+            try {
+                const response = await fetch('http://localhost:5000/signup', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        name: form.querySelector('input[type="text"]').value,
+                        email: form.querySelector('input[type="email"]').value,
+                        register: form.querySelectorAll('input[type="text"]')[1].value,
+                        password: form.querySelector('input[type="password"]').value
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    alert('Signup successful! Please login.');
+                    toggleForm('login');
+                } else {
+                    errorDiv.textContent = data.message;
+                    errorDiv.style.display = 'block';
+                }
+            } catch (error) {
+                errorDiv.textContent = 'An error occurred. Please try again.';
+                errorDiv.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html> 

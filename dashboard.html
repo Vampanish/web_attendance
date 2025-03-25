@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Dashboard - Roll Call Management System</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #f4f4f4;
+            min-height: 100vh;
+        }
+
+        .dashboard {
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .welcome-text {
+            font-size: 1.5rem;
+            color: #333;
+        }
+
+        .logout-btn {
+            padding: 8px 20px;
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .logout-btn:hover {
+            background-color: #c82333;
+        }
+
+        .subject-selector {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .subject-selector select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #4CAF50;
+            margin: 10px 0;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .charts-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .chart-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .attendance-table {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+        }
+
+        .status-present { color: #4CAF50; }
+        .status-absent { color: #dc3545; }
+        .status-od { color: #ffc107; }
+
+        @media (max-width: 768px) {
+            .charts-container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <div class="header">
+            <div class="welcome-text">Welcome, <span id="studentName"></span></div>
+            <button class="logout-btn" onclick="logout()">Logout</button>
+        </div>
+
+        <div class="subject-selector">
+            <select id="subjectSelect" onchange="updateDashboard()">
+                <option value="all">Overall Attendance</option>
+                <!-- Subjects will be dynamically added here -->
+            </select>
+        </div>
+
+        <div class="stats-container">
+            <div class="stat-card">
+                <div class="stat-value" id="attendancePercentage">-</div>
+                <div class="stat-label">Attendance Percentage</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="presentCount">-</div>
+                <div class="stat-label">Days Present</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="absentCount">-</div>
+                <div class="stat-label">Days Absent</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="odCount">-</div>
+                <div class="stat-label">OD Days</div>
+            </div>
+        </div>
+
+        <div class="charts-container">
+            <div class="chart-card">
+                <canvas id="attendanceChart"></canvas>
+            </div>
+            <div class="chart-card">
+                <canvas id="trendChart"></canvas>
+            </div>
+        </div>
+
+        <div class="attendance-table">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Subject</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="attendanceTableBody">
+                    <!-- Attendance records will be dynamically added here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // Check if user is logged in
+        const userData = JSON.parse(sessionStorage.getItem('userData'));
+        if (!userData) {
+            window.location.href = 'index.html';
+        }
+
+        // Display student name
+        document.getElementById('studentName').textContent = userData.name;
+
+        let allAttendanceData = {};
+        let subjects = [];
+        let attendanceChart = null;
+        let trendChart = null;
+
+        // Fetch subjects and attendance data
+        async function initializeDashboard() {
+            try {
+                // Fetch subjects
+                const subjectsResponse = await fetch('http://localhost:5000/getSubjects');
+                const subjectsData = await subjectsResponse.json();
+                subjects = subjectsData;
+
+                // Add subjects to selector
+                const subjectSelect = document.getElementById('subjectSelect');
+                subjects.forEach(subject => {
+                    const option = document.createElement('option');
+                    option.value = subject.course_code;
+                    option.textContent = `${subject.course_code} - ${subject.course_name}`;
+                    subjectSelect.appendChild(option);
+                });
+
+                // Fetch attendance data
+                const attendanceResponse = await fetch(`http://localhost:5000/getStudentAttendance?register=${userData.register}`);
+                allAttendanceData = await attendanceResponse.json();
+
+                updateDashboard();
+            } catch (error) {
+                console.error('Error initializing dashboard:', error);
+            }
+        }
+
+        function updateDashboard() {
+            const selectedSubject = document.getElementById('subjectSelect').value;
+            let attendanceData = [];
+
+            if (selectedSubject === 'all') {
+                // Combine all subjects' attendance
+                Object.values(allAttendanceData).forEach(subjectData => {
+                    attendanceData = attendanceData.concat(subjectData);
+                });
+            } else {
+                attendanceData = allAttendanceData[selectedSubject] || [];
+            }
+
+            updateStats(attendanceData);
+            updateCharts(attendanceData);
+            updateTable(attendanceData);
+        }
+
+        function updateStats(attendanceData) {
+            const total = attendanceData.length;
+            const present = attendanceData.filter(a => a.status === 'Present').length;
+            const absent = attendanceData.filter(a => a.status === 'Absent').length;
+            const od = attendanceData.filter(a => a.status === 'OD').length;
+            
+            const presentPercentage = total > 0 ? ((present / total) * 100).toFixed(1) : 0;
+            const absentPercentage = total > 0 ? ((absent / total) * 100).toFixed(1) : 0;
+            const odPercentage = total > 0 ? ((od / total) * 100).toFixed(1) : 0;
+            const totalPercentage = total > 0 ? (((present + od) / total) * 100).toFixed(1) : 0;
+
+            document.getElementById('attendancePercentage').textContent = `${totalPercentage}%`;
+            document.getElementById('presentCount').textContent = `${present} (${presentPercentage}%)`;
+            document.getElementById('absentCount').textContent = `${absent} (${absentPercentage}%)`;
+            document.getElementById('odCount').textContent = `${od} (${odPercentage}%)`;
+        }
+
+        function updateCharts(attendanceData) {
+            const total = attendanceData.length;
+            const present = attendanceData.filter(a => a.status === 'Present').length;
+            const absent = attendanceData.filter(a => a.status === 'Absent').length;
+            const od = attendanceData.filter(a => a.status === 'OD').length;
+            
+            const presentPercentage = total > 0 ? ((present / total) * 100).toFixed(1) : 0;
+            const absentPercentage = total > 0 ? ((absent / total) * 100).toFixed(1) : 0;
+            const odPercentage = total > 0 ? ((od / total) * 100).toFixed(1) : 0;
+
+            // Attendance Distribution Chart
+            const ctx1 = document.getElementById('attendanceChart').getContext('2d');
+            if (attendanceChart) attendanceChart.destroy();
+            
+            attendanceChart = new Chart(ctx1, {
+                type: 'doughnut',
+                data: {
+                    labels: [`Present (${presentPercentage}%)`, `Absent (${absentPercentage}%)`, `OD (${odPercentage}%)`],
+                    datasets: [{
+                        data: [present, absent, od],
+                        backgroundColor: ['#4CAF50', '#dc3545', '#ffc107']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Attendance Distribution'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const value = context.raw;
+                                    const percentage = ((value / total) * 100).toFixed(1);
+                                    return `${context.label}: ${value} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Attendance Trend Chart
+            const ctx2 = document.getElementById('trendChart').getContext('2d');
+            if (trendChart) trendChart.destroy();
+
+            // Sort attendance by date
+            const sortedData = [...attendanceData].sort((a, b) => 
+                new Date(a.attendancedate) - new Date(b.attendancedate)
+            );
+
+            trendChart = new Chart(ctx2, {
+                type: 'line',
+                data: {
+                    labels: sortedData.map(a => new Date(a.attendancedate).toLocaleDateString()),
+                    datasets: [{
+                        label: 'Attendance Status',
+                        data: sortedData.map(a => a.status === 'Present' ? 1 : (a.status === 'OD' ? 0.5 : 0)),
+                        borderColor: '#4CAF50',
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Attendance Trend'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 1
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateTable(attendanceData) {
+            const tbody = document.getElementById('attendanceTableBody');
+            tbody.innerHTML = '';
+
+            // Filter only Absent and OD records
+            const filteredData = attendanceData.filter(record => 
+                record.status === 'Absent' || record.status === 'OD'
+            );
+
+            // Sort by date (most recent first)
+            const sortedData = [...filteredData].sort((a, b) => 
+                new Date(b.attendancedate) - new Date(a.attendancedate)
+            );
+
+            if (sortedData.length === 0) {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td colspan="3" style="text-align: center; color: #666;">
+                        No absences or OD records found
+                    </td>
+                `;
+                tbody.appendChild(row);
+                return;
+            }
+
+            sortedData.forEach(record => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${new Date(record.attendancedate).toLocaleDateString()}</td>
+                    <td>${record.subject || '-'}</td>
+                    <td class="status-${record.status.toLowerCase()}">${record.status}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function logout() {
+            sessionStorage.removeItem('userData');
+            window.location.href = 'index.html';
+        }
+
+        // Initialize dashboard when page loads
+        initializeDashboard();
+    </script>
+</body>
+</html>
