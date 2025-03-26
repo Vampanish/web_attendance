@@ -149,18 +149,24 @@
 
         <div class="form-container">
             <!-- Login Form -->
-            <form id="loginForm" class="active">
-                <div class="input-box">
-                    <label>Register Number</label>
-                    <input type="text" required>
+            <div class="login-container">
+                <h2>Login</h2>
+                <div class="role-selector">
+                    <button class="role-btn active" onclick="switchRole('student')">Student</button>
+                    <button class="role-btn" onclick="switchRole('teacher')">Teacher</button>
                 </div>
-                <div class="input-box">
-                    <label>Password</label>
-                    <input type="password" required>
-                </div>
-                <button type="submit" class="button">Login</button>
-                <div class="error-message"></div>
-            </form>
+                <form id="loginForm" onsubmit="handleLogin(event)">
+                    <div class="form-group">
+                        <label for="username">Username</label>
+                        <input type="text" id="username" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" required>
+                    </div>
+                    <button type="submit">Login</button>
+                </form>
+            </div>
 
             <!-- Signup Form -->
             <form id="signupForm">
@@ -205,38 +211,53 @@
             }
         }
 
-        // Login form submission
-        document.getElementById('loginForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const form = e.target;
-            const errorDiv = form.querySelector('.error-message');
-            
+        let currentRole = 'student';
+
+        function switchRole(role) {
+            currentRole = role;
+            document.querySelectorAll('.role-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+        }
+
+        async function handleLogin(event) {
+            event.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
             try {
-                const response = await fetch('http://localhost:5000/login', {
+                const endpoint = currentRole === 'student' ? '/login' : '/teacherLogin';
+                const response = await fetch(`http://localhost:5000${endpoint}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({
-                        register: form.querySelector('input[type="text"]').value,
-                        password: form.querySelector('input[type="password"]').value
-                    })
+                    body: JSON.stringify({ username, password })
                 });
 
                 const data = await response.json();
 
-                if (response.ok) {
-                    sessionStorage.setItem('userData', JSON.stringify(data));
-                    window.location.href = 'dashboard.html';
+                if (data.success) {
+                    sessionStorage.setItem('userData', JSON.stringify({
+                        username,
+                        role: currentRole,
+                        name: data.name || username
+                    }));
+                    
+                    if (currentRole === 'student') {
+                        window.location.href = 'dashboard.html';
+                    } else {
+                        window.location.href = 'teacher.html';
+                    }
                 } else {
-                    errorDiv.textContent = data.message;
-                    errorDiv.style.display = 'block';
+                    alert(data.message || 'Login failed');
                 }
             } catch (error) {
-                errorDiv.textContent = 'An error occurred. Please try again.';
-                errorDiv.style.display = 'block';
+                console.error('Login error:', error);
+                alert('Login failed. Please try again.');
             }
-        });
+        }
 
         // Signup form submission
         document.getElementById('signupForm').addEventListener('submit', async (e) => {
