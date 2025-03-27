@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Staff Login - Roll Call Management System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+        }
+
+        .container {
+            position: relative;
+            max-width: 850px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 40px 30px;
+            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+
+        .container header {
+            position: relative;
+            font-size: 24px;
+            font-weight: 600;
+            color: #333;
+            text-align: center;
+            margin-bottom: 35px;
+        }
+
+        .container header::before {
+            content: "";
+            position: absolute;
+            left: 0;
+            bottom: -10px;
+            height: 3px;
+            width: 100%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+        }
+
+        .toggle-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+
+        .toggle-btn {
+            padding: 10px 30px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            color: #666;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .toggle-btn.active {
+            color: #764ba2;
+        }
+
+        .toggle-btn.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: #764ba2;
+        }
+
+        .form-container form {
+            display: none;
+        }
+
+        .form-container form.active {
+            display: block;
+        }
+
+        .input-box {
+            margin-bottom: 25px;
+        }
+
+        .input-box label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .input-box input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 15px;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.9);
+        }
+
+        .input-box input:focus {
+            border-color: #764ba2;
+            box-shadow: 0 0 8px rgba(118, 75, 162, 0.2);
+        }
+
+        .button {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border: none;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .button:hover {
+            background: linear-gradient(-135deg, #667eea, #764ba2);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(118, 75, 162, 0.3);
+        }
+
+        .error-message {
+            color: #dc3545;
+            text-align: center;
+            margin-top: 15px;
+            display: none;
+            padding: 10px;
+            border-radius: 5px;
+            background: rgba(220, 53, 69, 0.1);
+        }
+
+        .success-message {
+            color: #28a745;
+            text-align: center;
+            margin-top: 15px;
+            display: none;
+            padding: 10px;
+            border-radius: 5px;
+            background: rgba(40, 167, 69, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>Staff Portal</header>
+        
+        <div class="toggle-container">
+            <button class="toggle-btn active" onclick="toggleForm('login')">Login</button>
+            <button class="toggle-btn" onclick="toggleForm('signup')">Sign Up</button>
+        </div>
+
+        <div class="form-container">
+            <!-- Login Form -->
+            <form id="loginForm" class="active">
+                <div class="input-box">
+                    <label>Email</label>
+                    <input type="email" id="loginEmail" required>
+                </div>
+                <div class="input-box">
+                    <label>Password</label>
+                    <input type="password" id="loginPassword" required>
+                </div>
+                <button type="submit" class="button">Login</button>
+                <div class="error-message"></div>
+            </form>
+
+            <!-- Signup Form -->
+            <form id="signupForm">
+                <div class="input-box">
+                    <label>Full Name</label>
+                    <input type="text" id="signupName" required>
+                </div>
+                <div class="input-box">
+                    <label>Email</label>
+                    <input type="email" id="signupEmail" required>
+                </div>
+                <div class="input-box">
+                    <label>Staff ID</label>
+                    <input type="text" id="signupStaffId" required>
+                </div>
+                <div class="input-box">
+                    <label>Department</label>
+                    <input type="text" id="signupDepartment" required>
+                </div>
+                <div class="input-box">
+                    <label>Password</label>
+                    <input type="password" id="signupPassword" required>
+                </div>
+                <div class="input-box">
+                    <label>Confirm Password</label>
+                    <input type="password" id="signupConfirmPassword" required>
+                </div>
+                <button type="submit" class="button">Sign Up</button>
+                <div class="error-message"></div>
+                <div class="success-message"></div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function toggleForm(formType) {
+            const loginForm = document.getElementById('loginForm');
+            const signupForm = document.getElementById('signupForm');
+            const [loginBtn, signupBtn] = document.querySelectorAll('.toggle-btn');
+
+            if (formType === 'login') {
+                loginForm.classList.add('active');
+                signupForm.classList.remove('active');
+                loginBtn.classList.add('active');
+                signupBtn.classList.remove('active');
+            } else {
+                signupForm.classList.add('active');
+                loginForm.classList.remove('active');
+                signupBtn.classList.add('active');
+                loginBtn.classList.remove('active');
+            }
+        }
+
+        // Login form submission
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const form = e.target;
+            const errorDiv = form.querySelector('.error-message');
+            
+            try {
+                const response = await fetch('http://localhost:5000/staff/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: document.getElementById('loginEmail').value,
+                        password: document.getElementById('loginPassword').value
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    sessionStorage.setItem('staffData', JSON.stringify(data));
+                    window.location.href = 'teacherdashboard.html';
+                } else {
+                    errorDiv.textContent = data.message;
+                    errorDiv.style.display = 'block';
+                }
+            } catch (error) {
+                errorDiv.textContent = 'An error occurred. Please try again';
+                errorDiv.style.display = 'block';
+            }
+        });
+
+        // Signup form submission
+        document.getElementById('signupForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const form = e.target;
+            const errorDiv = form.querySelector('.error-message');
+            const successDiv = form.querySelector('.success-message');
+            
+            const password = document.getElementById('signupPassword').value;
+            const confirmPassword = document.getElementById('signupConfirmPassword').value;
+
+            if (password !== confirmPassword) {
+                errorDiv.textContent = 'Passwords do not match';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            const formData = {
+                name: document.getElementById('signupName').value,
+                email: document.getElementById('signupEmail').value,
+                staffId: document.getElementById('signupStaffId').value,
+                department: document.getElementById('signupDepartment').value,
+                password: password
+            };
+
+            console.log('Sending signup data:', formData); // Log the data being sent
+
+            try {
+                const response = await fetch('http://localhost:5000/staff/signup', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const data = await response.json();
+                console.log('Server response:', data); // Log the server response
+
+                if (response.ok) {
+                    successDiv.textContent = 'Registration successful! Please login.';
+                    successDiv.style.display = 'block';
+                    setTimeout(() => {
+                        toggleForm('login');
+                    }, 2000);
+                } else {
+                    errorDiv.textContent = data.message || data.error || 'Registration failed';
+                    errorDiv.style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Signup error:', error);
+                errorDiv.textContent = 'An error occurred. Please try again.';
+                errorDiv.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html> 

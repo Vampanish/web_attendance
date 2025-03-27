@@ -79,14 +79,14 @@ app.post('/login', async (req, res) => {
             }
 
             if (results.length === 0) {
-                return res.status(401).json({ message: 'Invalid credentials' });
+                return res.status(401).json({ message: 'Invalid credentials for result' });
             }
 
             const user = results[0];
             const validPassword = await bcrypt.compare(password, user.password);
 
             if (!validPassword) {
-                return res.status(401).json({ message: 'Invalid credentials' });
+                return res.status(401).json({ message: 'Invalid credentials for password' });
             }
 
             // Send user data without password
@@ -184,6 +184,231 @@ app.get('/getSubjects', (req, res) => {
         }
         res.json(results);
     });
+});
+
+// Get students by subject
+app.get('/getStudentsBySubject', (req, res) => {
+    const { courseCode } = req.query;
+
+    if (!courseCode) {
+        return res.status(400).json({ message: 'Course code is required' });
+    }
+
+    // Query to get all students since they are all enrolled in all subjects
+    const query = `
+        SELECT register, name, email
+        FROM users
+        ORDER BY register
+    `;
+
+    db.query(query, (err, results) => {
+        if (err) {
+            console.error('Error fetching students:', err);
+            return res.status(500).json({ message: 'Error fetching students' });
+        }
+        res.json(results);
+    });
+});
+
+// Staff signup endpoint
+app.post('/staff/signup', async (req, res) => {
+    console.log('Received staff signup request:', req.body);
+
+    const { name, email, staffId, department, password } = req.body;
+
+    // Validate input
+    if (!name || !email || !staffId || !department || !password) {
+        console.log('Missing required fields:', { name, email, staffId, department, password: password ? 'exists' : 'missing' });
+        return res.status(400).json({ message: 'All fields are required' });
+    }
+
+    // Validate staff ID length
+    if (staffId.length > 16) {
+        console.log('Staff ID too long:', staffId.length);
+        return res.status(400).json({ message: 'Staff ID must be 16 characters or less' });
+    }
+
+    try {
+        // Check if staff already exists
+        const checkQuery = 'SELECT staff_id FROM staffs WHERE staff_id = ? OR email = ?';
+        console.log('Checking for existing staff:', { staffId, email });
+        
+        db.query(checkQuery, [staffId, email], async (err, results) => {
+            if (err) {
+                console.error('Database check error:', err);
+                return res.status(500).json({ message: 'Server error during staff check' });
+            }
+
+            if (results.length > 0) {
+                console.log('Staff already exists:', results[0]);
+                return res.status(400).json({ message: 'Staff member already exists' });
+            }
+
+            // Hash password
+            const hashedPassword = await bcrypt.hash(password, 10);
+            console.log('Password hashed successfully');
+
+            // Insert new staff member
+            const insertQuery = 'INSERT INTO staffs (name, email, staff_id, department, password) VALUES (?, ?, ?, ?, ?)';
+            console.log('Attempting to insert staff:', { name, email, staffId, department });
+            
+            db.query(insertQuery, [name, email, staffId, department, hashedPassword], (err) => {
+                if (err) {
+                    console.error('Database insert error:', err);
+                    return res.status(500).json({ 
+                        message: 'Error creating staff account',
+                        error: err.message 
+                    });
+                }
+
+                console.log('Staff account created successfully');
+                res.status(201).json({ message: 'Staff account created successfully' });
+            });
+        });
+    } catch (error) {
+        console.error('Signup error:', error);
+        res.status(500).json({ 
+            message: 'Server error',
+            error: error.message 
+        });
+    }
+});
+
+// Staff login endpoint
+app.post('/staff/login', async (req, res) => {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+        return res.status(400).json({ message: 'Email and password are required' });
+    }
+
+    try {
+        const query = 'SELECT * FROM staffs WHERE email = ?';
+        db.query(query, [email], async (err, results) => {
+            if (err) {
+                console.error('Database error:', err);
+                return res.status(500).json({ message: 'Server error' });
+            }
+
+            if (results.length === 0) {
+                return res.status(401).json({ message: 'Invalid email or password' });
+            }
+
+            const staff = results[0];
+            const validPassword = await bcrypt.compare(password, staff.password);
+
+            if (!validPassword) {
+                return res.status(401).json({ message: 'Invalid email or password' });
+            }
+
+            // Don't send password in response
+            const { password: _, ...staffData } = staff;
+            res.json(staffData);
+        });
+    } catch (error) {
+        console.error('Staff login error:', error);
+        res.status(500).json({ message: 'An error occurred during login' });
+    }
+});
+
+// Submit attendance endpoint
+app.post('/submitAttendance', async (req, res) => {
+    const { courseCode, date, attendance } = req.body;
+
+    if (!courseCode || !date || !attendance || !Array.isArray(attendance)) {
+        return res.status(400).json({ message: 'Invalid attendance data' });
+    }
+
+    const tableName = `attendance_${courseCode}`;
+
+    try {
+        // Check if attendance already exists for this date
+        const checkQuery = `SELECT register FROM ${tableName} WHERE attendancedate = ?`;
+        db.query(checkQuery, [date], (err, results) => {
+            if (err) {
+                console.error('Error checking existing attendance:', err);
+                return res.status(500).json({ message: 'Server error' });
+            }
+
+            if (results.length > 0) {
+                return res.status(400).json({ message: 'Attendance already marked for this date' });
+            }
+
+            // Insert attendance records
+            const insertQuery = `INSERT INTO ${tableName} (register, attendancedate, status) VALUES ?`;
+            const values = attendance.map(record => [record.register, date, record.status]);
+
+            db.query(insertQuery, [values], (err) => {
+                if (err) {
+                    console.error('Error inserting attendance:', err);
+                    return res.status(500).json({ message: 'Error saving attendance' });
+                }
+
+                res.json({ message: 'Attendance marked successfully' });
+            });
+        });
+    } catch (error) {
+        console.error('Attendance submission error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// Get attendance for a specific date
+app.get('/getAttendance', (req, res) => {
+    const { courseCode, date } = req.query;
+
+    if (!courseCode || !date) {
+        return res.status(400).json({ message: 'Course code and date are required' });
+    }
+
+    const tableName = `attendance_${courseCode}`;
+    const query = `SELECT register, status FROM ${tableName} WHERE attendancedate = ?`;
+
+    db.query(query, [date], (err, results) => {
+        if (err) {
+            console.error('Error fetching attendance:', err);
+            return res.status(500).json({ message: 'Error fetching attendance' });
+        }
+        res.json(results);
+    });
+});
+
+// Update attendance endpoint
+app.post('/updateAttendance', async (req, res) => {
+    const { courseCode, date, attendance } = req.body;
+
+    if (!courseCode || !date || !attendance || !Array.isArray(attendance)) {
+        return res.status(400).json({ message: 'Invalid attendance data' });
+    }
+
+    const tableName = `attendance_${courseCode}`;
+
+    try {
+        // Delete existing attendance for this date
+        const deleteQuery = `DELETE FROM ${tableName} WHERE attendancedate = ?`;
+        db.query(deleteQuery, [date], (err) => {
+            if (err) {
+                console.error('Error deleting existing attendance:', err);
+                return res.status(500).json({ message: 'Error updating attendance' });
+            }
+
+            // Insert updated attendance records
+            const insertQuery = `INSERT INTO ${tableName} (register, attendancedate, status) VALUES ?`;
+            const values = attendance.map(record => [record.register, date, record.status]);
+
+            db.query(insertQuery, [values], (err) => {
+                if (err) {
+                    console.error('Error inserting updated attendance:', err);
+                    return res.status(500).json({ message: 'Error updating attendance' });
+                }
+
+                res.json({ message: 'Attendance updated successfully' });
+            });
+        });
+    } catch (error) {
+        console.error('Attendance update error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
 });
 
 app.listen(5000, () => console.log("Server running on port 5000"));
